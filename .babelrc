@@ -1,0 +1,19 @@
+{
+  "plugins": [
+    "transform-decorators-legacy",
+    "transform-object-rest-spread"
+  ],
+  "presets": [
+    ["es2015", { "modules": false }],
+    "react",
+    "stage-0"
+  ],
+  "env": {
+    "development": {
+      "plugins": ["react-hot-loader/babel"]
+    },
+    "test": {
+      "plugins": ["transform-es2015-modules-commonjs"]
+    }
+  }
+}
