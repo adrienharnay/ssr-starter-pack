@@ -11,11 +11,11 @@ However, after we've tried the two, we felt like the restrictions would led to t
 ## What is Server Side Rendering?
 
 First, let's start with what is Client Side Rendering: your srver sends your client an HTML page, with an empty body and a script tag which will load your React bundle. The client's browser will parse the React code, build the DOM and inject it in the HTML.  
-_Based on their network and CPU, the client could wait ages to see meaningful content_
+_Based on their network and CPU, the client could wait ages to see meaningful content._
 
 
 With Server Side Rendering, your bundle is first converted to HTML on the server, and the actual content is sent to the client. Then, the client's browser will do the same job as before, and check that the output from your bundle is the same as the DOM the server just sent.  
-_The client sees the content instantly, instead of having to wait for the Javascript to be parsed_
+_The client sees the content instantly, instead of having to wait for the Javascript to be parsed._
 
 ## Requirements
 
