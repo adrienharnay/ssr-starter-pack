@@ -8,6 +8,12 @@ At my daily job at [brigad.co](https://brigad.co), we have been using React, Rea
 Now, if you are starting a new project, or have a medium-sized one, or even are eager to do some refactoring on your project architecture and configuration, I would definitely recommend you try the two frameworks and pick the one you most like. Just like most people would use [create-react-app](https://github.com/facebookincubator/create-react-app) to start a client-side project. Plus both these project have an awesome community behing them, and arguably more features than this _starter_ pack offers.  
 However, after we've tried the two, we felt like the restrictions would led to too much refactoring, and decided to try implementing our own solution, using (almost) only Webpack.  
 
+## What is Server Side Rendering?
+
+First, let's start with what is Client Side Rendering: your srver sends your client an HTML page, with an empty body and a script tag which will load your React bundle. The the client's browser will parse the React code, build the DOM and inject it in the HTML.  
+With Server Side Rendering, your bundle is first converted to HTML on the server, and the actual content is sent to the client. Then, the client's browser will do the same job as before, and check that the output from your bundle is the same as the DOM the server sent.  
+The upside here is that your client will see the page when the server responds, instead of having to wait for the Javascript to be parsed.
+
 ## Requirements
 
 So, let's start with the requirements, based on the needs of our project:
