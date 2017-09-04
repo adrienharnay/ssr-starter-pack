@@ -190,8 +190,8 @@ const plugins = [
 ];
 
 const devEntries = !IS_PRODUCTION ? [
-  'react-hot-loader/patch',
   'webpack-hot-middleware/client',
+  'react-hot-loader/patch',
 ] : [];
 
 const config = {
