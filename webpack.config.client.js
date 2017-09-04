@@ -197,7 +197,7 @@ const devEntries = !IS_PRODUCTION ? [
 const config = {
   name: 'client',
   target: 'web',
-  devtool: !IS_PRODUCTION ? 'inline-source-map' : false,
+  devtool: !IS_PRODUCTION ? 'eval' : false,
   bail: IS_PRODUCTION,
   entry: [
     './client/src/entry/js/polyfills',
