@@ -1,4 +1,4 @@
-# Server Side Rendering Starter Pack
+# You might (not) need a SSR framework
 
 At my daily job at [brigad.co](https://brigad.co), we have been using React, React-router and Webpack for quite some time. When the need to have better SEO and to deliver content faster arose, the choice to integrate Server Side Rendering came as obvious. So I started playing around with the most popular frameworks. To name two:
 
