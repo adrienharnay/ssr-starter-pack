@@ -1,6 +1,6 @@
 # You might (not) need a SSR framework
 
-> TL;DR: a repository is all set up for you right [here]()
+> TL;DR: a repository is all set up for you right [here](https://github.com/Zephir77167/ssr-starter-pack)
 
 At my daily job at [brigad.co](https://brigad.co), we have been using React, React-router and Webpack for quite some time. When the need to have better SEO and to deliver content faster arose, the choice to integrate Server Side Rendering came as obvious. So I started playing around with the most popular frameworks. To name two:
 
@@ -24,9 +24,9 @@ _The client sees the content instantly, instead of having to wait for the Javasc
 So, let's start with the requirements, based on the needs of our project:
 
 - [Code splitting / Route-based chunk loading on the client](#code-splitting--async-chunk-loading-on-the-client)
-- [CSS Modules working without FOUT]()
-- [Smaller images bundled with JS, larger images served by S3 (or some other CDN)]()
-- [Long-term caching of assets, including chunks]()
+- [CSS Modules working without FOUT](#css-modules-working-without-fout)
+- [Smaller images bundled with JS, larger images served by S3 (or some other CDN)](#smaller-images-bundled-with-js-larger-images-served-by-s3-or-some-other-cdn)
+- [Long-term caching of assets, including chunks](#long-term-caching-of-assets-including-chunks)
 - [A proper dev environment]()
 - [A painless experience for the developer]()
 
@@ -132,7 +132,7 @@ const syncComponent = (chunkName, mod) => {
 };
 ```
 
-And here is the server version. It renders a synchronous component, and pushes its name to an array we pass it as a parameter. This parameter is [implicitly passed]() by react-router to routes.
+And here is the server version. It renders a synchronous component, and pushes its name to an array we pass it as a parameter. This parameter is [implicitly passed as staticContext](https://reacttraining.com/react-router/web/guides/server-rendering) by react-router to routes.
 
 #### How do we use those?
 
@@ -147,7 +147,7 @@ export const Page1 = asyncComponent(() => import(/* webpackChunkName: "Page1" */
 export const Page2 = asyncComponent(() => import(/* webpackChunkName: "Page2" */'src/views/page2/js/Page2'));
 ```
 
-A bit tedious to repeat the name of the importer component in the [Webpack magic comment](), but it is on the same line so not a big problem.
+A bit tedious to repeat the name of the importer component in the [Webpack magic comment](https://webpack.js.org/guides/code-splitting/#dynamic-imports), but it is on the same line so not a big problem.
 
 [Bundles.js](./client/src/entry/js/components/Bundles.js)
 ```js
@@ -161,7 +161,7 @@ Same problem with the server version, but again, not the worst.
 
 #### What do we do with our routes?
 
-Good question. Now that our routes are gathered ine one file, it is time to define the structure of our app, thanks to [react-router-config]().
+Good question. Now that our routes are gathered ine one file, it is time to define the structure of our app, thanks to [react-router-config](https://github.com/ReactTraining/react-router/tree/master/packages/react-router-config).
 
 [routes.js](./client/src/entry/js/components/routes.js)
 ```js
@@ -281,7 +281,7 @@ const render = manifests => (req, res) => {
 };
 ```
 
-This one will generate the markup on the server and send it to the client. Note that if a redirection happens between the rendering of the App, it will immediately redirect the client, making it seamless. I also added [pace.js]() to indicate to the user the site isn't responsive yet, but this is a matter of preference.  
+This one will generate the markup on the server and send it to the client. Note that if a redirection happens between the rendering of the App, it will immediately redirect the client, making it seamless. I also added [pace.js](http://github.hubspot.com/pace/docs/welcome/) to indicate to the user the site isn't responsive yet, but this is a matter of preference.  
 Also note that we inject the `splitPoints` and `serverSideHeaders` in the window, for the client to use.
 
 [App.js](./client/src/entry/js/App.js)
@@ -333,8 +333,8 @@ All of this code makes everything possible, but what about CSS? Our Node server 
 
 ### CSS Modules working without FOUT
 
-The solution here is rather simple. We want to use [extract-text-webpack-plugin]() on the server to bundle our CSS in a separate file, which will get included in the HTML we send to our users.  
-While we're at it, we should use [autoprefixer]() with a [.browserslistrc]() to specify which browsers we want to support!
+The solution here is rather simple. We want to use [extract-text-webpack-plugin](https://github.com/webpack-contrib/extract-text-webpack-plugin) on the server to bundle our CSS in a separate file, which will get included in the HTML we send to our users.  
+While we're at it, we should use [autoprefixer](https://github.com/postcss/autoprefixer) with a [.browserslistrc](https://github.com/ai/browserslist) to specify which browsers we want to support!
 
 [webpack.config.server.js](./webpack.config.server.js)
 ```js
@@ -485,7 +485,7 @@ And that's it, CSS is handled! But what about images?
 
 ### Smaller images bundled with JS, larger images served by S3 (or some other CDN)
 
-First, we will define a breakpoint between small and large images. Let's say 20kb for the sake of this article. Thanks to [url-loader](), images which weigh less than 20kb after compression will be inlined, while larger images will be loaded by the browser.
+First, we will define a breakpoint between small and large images. Let's say 20kb for the sake of this article. Thanks to [url-loader](https://github.com/webpack-contrib/url-loader), images which weigh less than 20kb after compression will be inlined, while larger images will be loaded by the browser.
 
 #### Generating images
 
@@ -522,7 +522,7 @@ const rules = [
 
 _Did you say compression?_
 
-Yes! While we're at it, why not using [image-webpack-loader]() which provides a way to compress images at build time, so we can ensure our users only download the most optimized content?
+Yes! While we're at it, why not using [image-webpack-loader](https://github.com/tcoopman/image-webpack-loader) which provides a way to compress images at build time, so we can ensure our users only download the most optimized content?
 
 _Tip: for this rule, use the same config on the server than on the client, except for `emitFile: false` on the server_
 
@@ -547,7 +547,7 @@ _Tip: you can always use `build:local` to debug your app in a production environ
 
 Our project works as intended! But what about cache? What is the point of providing a blazing-fast website when the user has to download every asset every time he visits it?
 
-If you're not familiar with the notion of long-term caching, I suggest you read the [docs from Webpack](). Basically, it makes so that your assets are cached undefinitely, unless they are changed.
+If you're not familiar with the notion of long-term caching, I suggest you read the [docs from Webpack](https://webpack.js.org/guides/caching/). Basically, it makes so that your assets are cached undefinitely, unless they are changed.
 
 #### Generating hashes in our assets names
 
