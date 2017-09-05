@@ -3,9 +3,7 @@ import { Route, Redirect } from 'react-router-dom';
 
 import { MainLayout, Home, Page1, Page2 } from './Bundles';
 
-const RedirectToNotFound = () => (
-  <Redirect to="/" />
-);
+const RedirectToNotFound = () => <Redirect to="/" />;
 
 const routes = (
   <Route component={MainLayout}>
