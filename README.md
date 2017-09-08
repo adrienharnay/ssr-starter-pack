@@ -27,7 +27,7 @@ So, let's start with the requirements, based on the needs of our project:
 - [CSS Modules working without FOUT](#css-modules-working-without-fout)
 - [Smaller images bundled with JS, larger images served by S3 (or some other CDN)](#smaller-images-bundled-with-js-larger-images-served-by-s3-or-some-other-cdn)
 - [Long-term caching of assets, including chunks](#long-term-caching-of-assets-including-chunks)
-- [A proper dev environment]()
+- [A proper development environment](#a-proper-development-environment)
 - [A painless experience for the developer]()
 
 ### Code splitting / Async chunk loading on the client
@@ -547,8 +547,151 @@ _Tip: you can always use `build:local` to debug your app in a production environ
 
 Our project works as intended! But what about cache? What is the point of providing a blazing-fast website when the user has to download every asset every time he visits it?
 
-If you're not familiar with the notion of long-term caching, I suggest you read the [docs from Webpack](https://webpack.js.org/guides/caching/). Basically, it makes so that your assets are cached undefinitely, unless they are changed.
+If you're not familiar with the notion of long-term caching, I suggest you read the [docs from Webpack](https://webpack.js.org/guides/caching/). Basically, it makes so that your assets are cached indefinitely, unless they are changed. Note that this only effects production build, as don't want any cache in development.
+
+#### Bundling node modules in a vendors chunk
+
+Node modules are heavy, and change less often than product code. Wouldn't it be a shame if the client should download node modules all over again each time a new feature is deployed? _It would_. But it's not, because we will bundle our node modules code in a separate chunk, which will only be invalidated when you update your dependencies.
+
+Also, code which is common to multiple chunks could be exported to a separate chunk to it only gets downloaded once.
+
+[webpack.config.client.js](./webpack.config.client.js)
+```js
+const plugins = [
+  new webpack.optimize.CommonsChunkPlugin({
+    name: 'client',
+    async: 'common',
+    children: true,
+    minChunks: (module, count) => {
+      if (module.resource && (/^.*\.(css|scss)$/).test(module.resource)) {
+        return false;
+      }
+      return count >= 3 && module.context && !module.context.includes('node_modules');
+    },
+  }),
+  new webpack.optimize.CommonsChunkPlugin({
+    name: 'client',
+    children: true,
+    minChunks: module => module.context && module.context.includes('node_modules'),
+  }),
+  new webpack.optimize.CommonsChunkPlugin({
+    name: 'vendors',
+    minChunks: module => module.context && module.context.includes('node_modules'),
+  }),
+];
+```
+
+Now, modules imported in 3 chunks or more will go in the `common` chunk, and node modules will go in the `vendors` chunk.
 
 #### Generating hashes in our assets names
 
-For every asset, we will want to have a hash based on the content of the chunk, so that if even one byte changes the hash will too.
+For every asset, we will want to have a hash based on the content of the chunk, so that if even one byte changed, the hash would too. We will achieve this by specifying a content hash in our assets names, in the webpack configs.
+
+[webpack.config.client.js](./webpack.config.client.js)
+```js
+{
+  loader: 'url-loader',
+  options: {
+    name: 'images/[name].[hash].[ext]',  
+  },
+},
+...
+output: {
+  filename: !IS_PRODUCTION ? 'client/[name].js' : 'client/[name].[chunkhash].js',
+  chunkFilename: !IS_PRODUCTION ? 'client/chunks/[name].chunk.js' : 'client/chunks/[name].[chunkhash].chunk.js',
+},
+```
+
+[webpack.config.server.js](./webpack.config.server.js)
+```js
+const extractCSS = new ExtractTextPlugin({
+  filename: !IS_PRODUCTION ? 'server/[name].css' : 'server/[name].[contenthash:8].css',
+});
+...
+{
+  loader: 'url-loader',
+  options: {
+    name: 'images/[name].[hash].[ext]',
+  },
+},
+```
+
+Also, we will use [md5-hash-webpack-plugin]() for more consistent hashes.
+
+[webpack.config.client.js](./webpack.config.client.js)
+```js
+const Md5HashPlugin = require('md5-hash-webpack-plugin');
+
+const prodPlugins = [
+  new Md5HashPlugin(),
+];
+```
+
+#### Mapping hashed names to predictable names
+
+To include our assets in the document, we will need to be able to predict their dynamic name. For this one, we will be using [webpack-manifest-plugin]().
+
+[webpack.config.client.js](./webpack.config.client.js)
+```js
+const ManifestPlugin = require('webpack-manifest-plugin');
+
+const prodPlugins = [
+  new ManifestPlugin({
+    fileName: 'client-manifest.json',
+    publicPath: PUBLIC_PATH,
+  }),
+];
+```
+
+[webpack.config.server.js](./webpack.config.server.js)
+```js
+const ManifestPlugin = require('webpack-manifest-plugin');
+
+const prodPlugins = [
+  new ManifestPlugin({
+    fileName: 'server-manifest.json',
+    publicPath: PUBLIC_PATH,
+  }),
+];
+```
+
+#### Including assets in the document
+
+The last step is to include our assets in the document. It requires accessing our manifests, in order to include the right assets names.
+
+[app.js](./app.js)
+```js
+const manifests = {};
+manifests.server = require('./public/dist/server-manifest');
+manifests.client = require('./public/dist/client-manifest');
+
+app.use(serverRender(manifests));
+```
+
+[server.js](./client/src/entry/js/server.js)
+```js
+const render = manifests => (req, res) => {
+  const markup = renderToString(
+    <App type="server" url={req.url} context={context} />,
+  );
+  
+  return res.send(`
+    <!doctype html>
+    <html>
+      <head>
+        <link rel="stylesheet" href="${!manifests.server ? '/dist/server/main.css' : manifests.server['main.css']}" />
+      </head>
+      <body>
+        <div id="content">${markup}</div>
+          
+        <script src="${!manifests.client ? '/dist/client/vendors.js' : manifests.client['vendors.js']}"></script>
+        <script src="${!manifests.client ? '/dist/client/main.js' : manifests.client['main.js']}"></script>
+      </body>
+    </html>
+  `);
+};
+```
+
+And this is it! Your user will now only download changed content, and keep the rest in cache.
+
+#### A proper development environment

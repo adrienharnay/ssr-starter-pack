@@ -21,7 +21,7 @@ const render = manifests => (req, res) => {
   );
 
   if (context.url) {
-    return res.redirect(301, context.url);
+    return res.redirect(302, context.url);
   }
 
   const helmet = Helmet.renderStatic();
