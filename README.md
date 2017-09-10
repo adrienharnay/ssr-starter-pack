@@ -694,4 +694,51 @@ const render = manifests => (req, res) => {
 
 And this is it! Your user will now only download changed content, and keep the rest in cache.
 
-#### A proper development environment
+### A proper development environment
+
+I talked a lot about the production setup, but what about development? It is quite similar to production, except we add hot reloading on the server and client, meaning we don't have to rebuild between changes as Webpack is watching our files!
+
+[app.dev.js](./app.dev.js)
+```js
+const webpack = require('webpack');
+const webpackDevMiddleware = require('webpack-dev-middleware');
+const webpackHotMiddleware = require('webpack-hot-middleware');
+const webpackHotServerMiddleware = require('webpack-hot-server-middleware');
+const clientConfig = require('./webpack.config.client');
+const serverConfig = require('./webpack.config.server');
+
+const multiCompiler = webpack([clientConfig, serverConfig]);
+const clientCompiler = multiCompiler.compilers[0];
+
+app.use(webpackDevMiddleware(multiCompiler, {
+  publicPath: clientConfig.output.publicPath,
+  noInfo: true,
+  stats: { children: false },
+}));
+app.use(webpackHotMiddleware(clientCompiler));
+app.use(webpackHotServerMiddleware(multiCompiler, {
+  serverRendererOptions: { outputPath: clientConfig.output.path },
+}));
+```
+
+### A painless experience for the developer
+
+Last but not least: the developer experience. Let's quickly recap the steps to integrate SSR into an existing codebase, assuming you're already bundling your code with Webpack :
+
+- create two Webpack configs (`client` and `server`)
+- create two server files (`app` and `app.dev`)
+- create two entry points (`client` and `server`)
+- adapt your app entry (`App`)
+- list all of your routes in the three files (`AsyncBundles`, `Bundles` and `routes`)
+- adapt route components which render sub-routes so they can also be rendered
+
+And once it is set up, the steps to create a new route:
+
+- add the route in the `Bundles` and `AsyncBundles` files
+- also add it in the `routes` file
+
+Aaaaaand that's it! You're all set up and ready to go to production.
+
+_Note on performance:_ in React 15, the `render` function is synchronous on the server, meaning that it could be a performance bottleneck if you have a lot of simultaneous requests. Fortunately, an async `render` [is coming with React 16](https://github.com/facebook/react/issues/10294)! You can already try it by installing `react@next`.
+
+That's pretty much all I have to share on the subject! Feel free to share your thoughts on the subject, and to submit improvements to the [ssr-starter-pack](https://github.com/Zephir77167/ssr-starter-pack) if you think of any!
