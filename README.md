@@ -31,7 +31,7 @@ So, let's start with the requirements, based on the needs of our project:
 - [Code splitting / Route-based chunk loading on the client](#code-splitting--async-chunk-loading-on-the-client)
 - [CSS Modules working without FOUT](#css-modules-working-without-fout)
 - [Smaller images bundled with JS, larger images served by S3 (or some other CDN)](#smaller-images-bundled-with-js-larger-images-served-by-s3-or-some-other-cdn)
-- [Long-term caching of assets, including chunks](#long-term-caching-of-assets-including-chunks-production-only)
+- [Long-term caching of assets, including chunks (production only)](#long-term-caching-of-assets-including-chunks-production-only)
 - [A proper development environment](#a-proper-development-environment)
 - [A painless experience for the developer](#a-painless-experience-for-the-developer)
 
@@ -338,8 +338,26 @@ const App = ({ type, url, context }) => {
 };
 ```
 
-This component will just render the right router (browser or static) based on the type of the App, and the Head for meta tags.
+This component will just render the right router (browser or static) based on the type of the App, and the Head, containing meta tags.
 
+[Head.js](./client/src/entry/js/components/Head.js)
+```js
+const Head = () => (
+  <Helmet>
+    <title>{'Server Side Rendering Starter Pack'}</title>
+
+    <meta charSet="utf-8" />
+    <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
+
+    <meta name="title" content="SSR Starter Pack" />
+    <meta name="author" content="Adrien HARNAY" />
+    <meta name="application-name" content="SSR Starter Pack" />
+    <meta name="description" content="A starter pack to help you implement your own solution for SSR" />
+    <meta name="keywords" content="react, ssr, server, side, rendering, webpack" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  </Helmet>
+);
+```
 
 [ServerRouting.js](./client/src/entry/js/components/ServerRouting.js)
 ```js
