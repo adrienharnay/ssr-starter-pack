@@ -1,12 +1,5 @@
 # Dependency directories
 node_modules/
 
-# Coverage directories used by tools like istanbul
-coverage/
-junit/
-
 # Build directories
 dist/
-
-# Webstorm project directory
-.idea/
