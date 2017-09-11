@@ -1,23 +1,28 @@
-# You might (not) need a SSR framework
+# You might (not) need a Server Side Rendering framework
 
 > TL;DR: a repository is all set up for you right [here](https://github.com/Zephir77167/ssr-starter-pack)
 
-At my daily job at [brigad.co](https://brigad.co), we have been using React, React-router and Webpack for quite some time. When the need to have better SEO and to deliver content faster arose, the choice to integrate Server Side Rendering came as obvious. So I started playing around with the most popular frameworks. To name two:
+At my daily job at [brigad.co](https://brigad.co), we have been using React, React-router and Webpack for quite some time. Came a time when we needed to improve our SEO, so we could rank higher in search engines; and Server Side Rendering came as an obvious choice. So I started playing around with the most popular frameworks. To name two:
 
 - [Gatsby](https://www.gatsbyjs.org/)
 - [Next](https://learnnextjs.com/)
 
-Now, if you are starting a new project, or have a medium-sized one, or even are eager to do some refactoring on your project architecture and configuration, I would definitely recommend you try the two frameworks and pick the one you most like. Just like most people would use [create-react-app](https://github.com/facebookincubator/create-react-app) to start a client-side project, they are great for starting something quickly. Plus both these project have an awesome community behing them, and arguably more features than this _starter_ pack offers.  
-However, after we've tried the two, we felt like the restrictions would led to too much refactoring, and decided to try implementing our own solution, using (almost) only Webpack.  
+If you are starting a new project, or love the warm embrace of a framework which decides some things for you and lets you focus on delivering, I would definitely recommend you try the two frameworks and pick the one you most like. Just like most people would use [create-react-app](https://github.com/facebookincubator/create-react-app) to start a client side project, they are great to start something quickly. Plus both of these project have an awesome community around them, and arguably more features than this _starter_ pack offers.
+
+However, after trying the two for a week or so, I felt like the restrictions which come with this kind of tools would led to too much refactoring, and did not really want to lock ourselves into a framework. So I went and implemented my own solution, using (almost) only Webpack.
+
+_Disclaimer:_ if I were to start a small project today, I would definitely start with Gatsby or Next. This post intention is really not to bash any framework, but rather to share my experience while trying to implement my own solution.
 
 ## What is Server Side Rendering?
 
-First, let's start with what is Client Side Rendering: your srver sends your client an HTML page, with an empty body and a script tag which will load your React bundle. The client's browser will parse the React code, build the DOM and inject it in the HTML.  
-_Based on their network and CPU, the client could wait ages to see meaningful content._
+First, let's start with what is Client Side Rendering: your server sends an HTML page to your client, with an empty body and a script tag which will load your React bundle. The client's browser will parse the React code, build the DOM and inject it in the DOM.  
+_Based on their network and CPU, the client could wait ages to see any content._
 
 
-With Server Side Rendering, your bundle is first converted to HTML on the server, and the actual content is sent to the client. Then, the client's browser will do the same job as before, and check that the output from your bundle is the same as the DOM the server just sent.  
+With Server Side Rendering, your bundle is first converted to HTML on the server, which is directly sent to the client. Then, the client's browser will do the same job as before, and check that the output from your bundle is the same as the DOM the server just sent (it always should be).  
 _The client sees the content instantly, instead of having to wait for the Javascript to be parsed._
+
+Server Side Rendering improves loading times, but also search engine ranking, as it will be easier for, say, Google, to crawl your site. Note thatGoogle should be able to crawl sites build with React by now, but for some reason it was seeing our site as a blank page before we introduced Server Side Rendering.
 
 ## Requirements
 
@@ -28,17 +33,16 @@ So, let's start with the requirements, based on the needs of our project:
 - [Smaller images bundled with JS, larger images served by S3 (or some other CDN)](#smaller-images-bundled-with-js-larger-images-served-by-s3-or-some-other-cdn)
 - [Long-term caching of assets, including chunks](#long-term-caching-of-assets-including-chunks)
 - [A proper development environment](#a-proper-development-environment)
-- [A painless experience for the developer]()
+- [A painless experience for the developer](#a-painless-experience-for-the-developer)
 
 ### Code splitting / Async chunk loading on the client
 
-_I wan to start by giving credit to [this post](https://blog.emilecantin.com/web/react/javascript/2017/05/16/ssr-react-router-4-webpack-code-split.html) by Emile Cantin, which helped me a lot on the subject._
-
-Let's start with the most complicated part.
+_I want to start by giving credit to Emile Cantin for [his post](https://blog.emilecantin.com/web/react/javascript/2017/05/16/ssr-react-router-4-webpack-code-split.html), which helped me a lot on the subject._
 
 #### What do we want here?
 
-On the client, we want code splitting with async chunk loading, so that the client only downloads chunks which are essentials for the current view. On the server, we want only one bundle, but while rendering we will store the chunks that would have been loaded on the client.
+On the client, we want code splitting with async chunk loading, so that the client only downloads chunks which are essentials for the current view.  
+On the server, we want only one bundle, but while rendering we will store the chunks that would have been loaded on the client.
 
 This is done with these two HOCs:
 
@@ -132,11 +136,11 @@ const syncComponent = (chunkName, mod) => {
 };
 ```
 
-And here is the server version. It renders a synchronous component, and pushes its name to an array we pass it as a parameter. This parameter is [implicitly passed as staticContext](https://reacttraining.com/react-router/web/guides/server-rendering) by react-router to routes.
+And here is the server version. It renders a synchronous component, and pushes its name to an array received in parameter. This parameter is [implicitly passed as staticContext](https://reacttraining.com/react-router/web/guides/server-rendering) by React-router to routes.
 
 #### How do we use those?
 
-The goal is to have a file (well two) with every route declared in it. One for the client version, and one for the server version.
+The goal is to have a file (well, two actually) with the list of every route of our app (one for the client version, and one for the server version).
 
 [AsyncBundles.js](./client/src/entry/js/components/AsyncBundles.js)
 
@@ -147,7 +151,7 @@ export const Page1 = asyncComponent(() => import(/* webpackChunkName: "Page1" */
 export const Page2 = asyncComponent(() => import(/* webpackChunkName: "Page2" */'src/views/page2/js/Page2'));
 ```
 
-A bit tedious to repeat the name of the importer component in the [Webpack magic comment](https://webpack.js.org/guides/code-splitting/#dynamic-imports), but it is on the same line so not a big problem.
+A bit tedious to repeat the name of the chunk in the [Webpack magic comment](https://webpack.js.org/guides/code-splitting/#dynamic-imports), but it is on the same line so it should not be hard to maintain.
 
 [Bundles.js](./client/src/entry/js/components/Bundles.js)
 ```js
@@ -157,17 +161,17 @@ export const Page1 = syncComponent('Page1', require('src/views/page1/js/Page1'))
 export const Page2 = syncComponent('Page2', require('src/views/page2/js/Page2'));
 ```
 
-Same problem with the server version, but again, not the worst.
+And the same list, using the other HOC.
 
 #### What do we do with our routes?
 
-Good question. Now that our routes are gathered ine one file, it is time to define the structure of our app, thanks to [react-router-config](https://github.com/ReactTraining/react-router/tree/master/packages/react-router-config).
+Good question. Now that our routes are gathered in one file, it is time to define the structure of our app. Thanks to [react-router-config](https://github.com/ReactTraining/react-router/tree/master/packages/react-router-config), we can do it in one place (this will be helpful for the server to know which routes can be rendered).
 
 [routes.js](./client/src/entry/js/components/routes.js)
 ```js
 import { MainLayout, Home, Page1, Page2 } from './Bundles';
 
-const RedirectToNotFound = () => <Redirect to="/" />;
+const RedirectToHome = () => <Redirect to="/" />;
 
 const routes = (
   <Route component={MainLayout}>
@@ -176,7 +180,7 @@ const routes = (
     <Route exact path="/page2" component={Page2} />
     <Route exact path="/" component={Home} />
 
-    <Route component={RedirectToNotFound} />
+    <Route component={RedirectToHome} />
   </Route>
 );
 
@@ -195,7 +199,9 @@ const routesArray = [{
 }];
 ```
 
-With this awesome package, and the `getChildRoutes` function, you can define your routes in a declarative way, in one file (which is practical for the server to know which routes can be rendered). The catch is, when you nest routes, your parent route must have this code inside it to render its children:
+With this awesome package, and the `getChildRoutes` function, you can define your routes in a declarative way, and of course you can nest them as you please.
+
+There is one catch though: when you nest routes, the parent route must have this code inside it to render its children routes:
 
 [MainLayout.js](./client/src/views/main-layout/js/MainLayout.js)
 ```js
@@ -208,19 +214,21 @@ const MainLayout = ({ route: { routes } }) => (
 );
 ```
 
-#### How do we differentiate between the client and server versions?
+#### How do we do the difference between the client and server versions?
 
-With a simple use of `webpack.NormalModuleReplacementPlugin`! Client side, it will replace occurences of `Bundle` with `AsyncBundle`.
+With the use of `webpack.NormalModuleReplacementPlugin`! Client side, it will replace occurrences of `Bundle` with `AsyncBundle`.
 
 [webpack.config.client.js](./webpack.config.client.js)
 ```js
-new webpack.NormalModuleReplacementPlugin(/\/components\/Bundles/, './components/AsyncBundles'),
-new webpack.NormalModuleReplacementPlugin(/\/Bundles/, './AsyncBundles'),
+const plugins = [
+  new webpack.NormalModuleReplacementPlugin(/\/components\/Bundles/, './components/AsyncBundles'),
+  new webpack.NormalModuleReplacementPlugin(/\/Bundles/, './AsyncBundles'),
+];
 ```
 
-#### Make the whole thing work
+#### Bundle the whole thing
 
-To wrap all of this, we create two entry points.
+For all of this to work together, we will create two entry points.
 
 [server.js](./client/src/entry/js/server.js)
 ```js
@@ -236,7 +244,7 @@ const render = manifests => (req, res) => {
   );
 
   if (context.url) {
-    return res.redirect(301, context.url);
+    return res.redirect(302, context.url);
   }
 
   const helmet = Helmet.renderStatic();
@@ -281,28 +289,11 @@ const render = manifests => (req, res) => {
 };
 ```
 
-This one will generate the markup on the server and send it to the client. Note that if a redirection happens between the rendering of the App, it will immediately redirect the client, making it seamless. I also added [pace.js](http://github.hubspot.com/pace/docs/welcome/) to indicate to the user the site isn't responsive yet, but this is a matter of preference.  
-Also note that we inject the `splitPoints` and `serverSideHeaders` in the window, for the client to use.
+The server entry will generate the markup on the server and send it to the client. Note that if a redirection happens during the rendering of the App, it will immediately redirect the client, making it seamless for them.  
+I added [pace.js](http://github.hubspot.com/pace/docs/welcome/) to indicate to the user the site isn't responsive yet, but this is a matter of preference.
 
-[App.js](./client/src/entry/js/App.js)
-```js
-const App = ({ type, url, context }) => {
-  const Routing = type === 'client' ? (
-    <ClientRouting />
-  ) : (
-    <ServerRouting url={url} context={context} />
-  );
 
-  return (
-    <div>
-      <Head />
-      {Routing}
-    </div>
-  );
-};
-```
-
-This component will just render the right router (browser or static) based on the type of the App, and the head for meta tags.
+Also, note that we inject the `splitPoints` and `serverSideHeaders` in the window, for the client entry point to use.
 
 [client.js](./client/src/entry/js/client.js)
 ```js
@@ -326,7 +317,27 @@ Promise.all(splitPoints.map(chunk => Bundles[chunk].loadComponent()))
   .then(doRender);
 ```
 
-And finally, the client entry point. It receives the split points and waits for all of them to be loaded to render. We also store the server side headers because it is often useful to have access to headers we otherwise couldn't access from the client (e.g. Accept-Language or custom headers).
+The client entry will receive the split points and waits for all of them to be loaded to render. We also store the server side headers because it is often useful to have access to headers we otherwise couldn't access from the client (e.g. Accept-Language or custom headers).
+
+[App.js](./client/src/entry/js/App.js)
+```js
+const App = ({ type, url, context }) => {
+  const Routing = type === 'client' ? (
+    <ClientRouting />
+  ) : (
+    <ServerRouting url={url} context={context} />
+  );
+
+  return (
+    <div>
+      <Head />
+      {Routing}
+    </div>
+  );
+};
+```
+
+This component will just render the right router (browser or static) based on the type of the App, and the head for meta tags.
 
 
 All of this code makes everything possible, but what about CSS? Our Node server sure doesn't know how to interpret it, and style-loader won't be of any help here as it relies on `window` to work.

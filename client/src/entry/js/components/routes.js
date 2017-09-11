@@ -3,7 +3,7 @@ import { Route, Redirect } from 'react-router-dom';
 
 import { MainLayout, Home, Page1, Page2 } from './Bundles';
 
-const RedirectToNotFound = () => <Redirect to="/" />;
+const RedirectToHome = () => <Redirect to="/" />;
 
 const routes = (
   <Route component={MainLayout}>
@@ -12,7 +12,7 @@ const routes = (
     <Route exact path="/page2" component={Page2} />
     <Route exact path="/" component={Home} />
 
-    <Route component={RedirectToNotFound} />
+    <Route component={RedirectToHome} />
   </Route>
 );
 
