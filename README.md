@@ -2,27 +2,27 @@
 
 > TL;DR: a repository is all set up for you right [here](https://github.com/Zephir77167/ssr-starter-pack)
 
-At my daily job at [brigad.co](https://brigad.co), we have been using React, React-router and Webpack for quite some time. Came a time when we needed to improve our SEO, so we could rank higher in search engines; and Server Side Rendering came as an obvious choice. So I started playing around with the most popular frameworks. To name two:
+At my daily job at [brigad.co](https://brigad.co), I have been using React, React-router and Webpack for quite some time. When we needed to improve our SEO, so we could rank higher in search engines; and Server Side Rendering came as an obvious choice. So I started playing around with the most popular frameworks. To name two:
 
 - [Gatsby](https://www.gatsbyjs.org/)
 - [Next](https://learnnextjs.com/)
 
-If you are starting a new project, or love the warm embrace of a framework which decides some things for you and lets you focus on delivering, I would definitely recommend you try the two frameworks and pick the one you most like. Just like most people would use [create-react-app](https://github.com/facebookincubator/create-react-app) to start a client side project, they are great to start something quickly. Plus both of these project have an awesome community around them, and arguably more features than this _starter_ pack offers.
+I would definitely recommend you give them a try if you haven't yet. Just like most people would use [create-react-app](https://github.com/facebookincubator/create-react-app) to start a client side project, they are great to quickly start a new project, while having an awesome community around them, and arguably more features than this _starter_ pack offers.
 
-However, after trying the two for a week or so, I felt like the restrictions which come with this kind of tools would led to too much refactoring, and did not really want to lock ourselves into a framework. So I went and implemented my own solution, using (almost) only Webpack.
+However, after trying the two for a week or so, I felt like the restrictions which come with a framework would led to too much refactoring, and that it didn't really suit our team. So I went and implemented my own solution, using (almost) only Webpack.
 
-_Disclaimer:_ this article's aim is to share my experience while trying to implement my own solution, and really not to take side on which solution is best. Pick what works for you!
+_Disclaimer:_ my aim here is to share my experience trying to implement my own solution, and really not to take side on which solution is best. Pick what works for you!
 
 ## What is Server Side Rendering?
 
-First, let's start with what is Client Side Rendering: your server sends an HTML page to your client, with an empty body and a script tag which will load your React bundle. The client's browser will parse the React code, build the DOM and inject it in the DOM.  
+First, let's start by explaining what is Client Side Rendering: your server sends an HTML page to the client, with an empty DOM and a script tag which will load your React bundle. The client's browser will parse the React code, transform it into HTML, and inject it in the DOM.  
 _Based on their network and CPU, the client could wait ages to see any content._
 
 
-With Server Side Rendering, your bundle is first converted to HTML on the server, which is directly sent to the client. Then, the client's browser will do the same job as before, and check that the output from your bundle is the same as the DOM the server just sent (it always should be).  
+With Server Side Rendering, your bundle is first transformed into HTML on the server, which is directly sent to the client. But the client's browser will still check that the output from the JS bundle is the same as the HTML the server just sent (it should always be).  
 _The client sees the content instantly, instead of having to wait for the Javascript to be parsed._
 
-Server Side Rendering improves loading times, but also search engine ranking, as it will be easier for, say, Google, to crawl your site. Note thatGoogle should be able to crawl sites build with React by now, but for some reason it was seeing our site as a blank page before we introduced Server Side Rendering.
+Server Side Rendering improves loading times, but also search engine ranking, as it will be easier for, say, Google, to crawl your site. Note that Google should be able to crawl sites build with React by now, but for some reason, it was still seeing our site as a blank page before we introduced Server Side Rendering ([How to see how your website looks like to Google](https://www.google.com/webmasters/tools/googlebot-fetch)).
 
 ## Requirements
 
