@@ -30,7 +30,7 @@ So, let's start with the requirements, based on the needs of our project:
 
 - [Code splitting / Route-based chunk loading on the client](#code-splitting--async-chunk-loading-on-the-client)
 - [CSS Modules working without FOUT](#css-modules-working-without-fout)
-- [Smaller images bundled with JS, larger images served by S3 (or some other CDN)](#smaller-images-bundled-with-js-larger-images-served-by-s3-or-some-other-cdn)
+- [Smaller images inlined with JS, larger images served by S3 (or some other CDN)](#smaller-images-inlined-with-js-larger-images-served-by-s3-or-some-other-cdn)
 - [Long-term caching of assets, including chunks (production only)](#long-term-caching-of-assets-including-chunks-production-only)
 - [A proper development environment](#a-proper-development-environment)
 - [A painless experience for the developer](#a-painless-experience-for-the-developer)
@@ -42,7 +42,7 @@ _I want to start by giving credit to Emile Cantin for [his post](https://blog.em
 #### What do we want here?
 
 On the client, we want code splitting with async chunk loading, so that the client only downloads chunks which are essentials for the current view.  
-On the server, we want only one bundle, but while rendering we will store the chunks that would have been loaded on the client.
+On the server, we want only one bundle, but when rendering we will store the names of the chunks that will later be needed on the client.
 
 This is done with these two HOCs:
 
@@ -106,7 +106,7 @@ const asyncComponent = (getComponent) => {
 };
 ```
 
-This one is the client version. It asynchronously loads a component and renders it when it is ready.
+The client version asynchronously loads a component and renders it when it is ready.
 
 [syncComponent.js](./client/src/hoc/code-splitting/js/syncComponent.js)
 
@@ -136,11 +136,11 @@ const syncComponent = (chunkName, mod) => {
 };
 ```
 
-And here is the server version. It renders a synchronous component, and pushes its name to an array received in parameter. This parameter is [implicitly passed as staticContext](https://reacttraining.com/react-router/web/guides/server-rendering) by React-router to routes.
+The server version renders a component synchronously, and stores its name in an array received in parameter. This parameter is [implicitly passed](https://reacttraining.com/react-router/web/guides/server-rendering) by React-router to each route component.
 
-#### How do we use those?
+#### How do we use them?
 
-The goal is to have a file (well, two actually) with the list of every route of our app (one for the client version, and one for the server version).
+The goal is to have a file (well, two actually) with the list of every route of our app.
 
 [AsyncBundles.js](./client/src/entry/js/components/AsyncBundles.js)
 
@@ -151,7 +151,7 @@ export const Page1 = asyncComponent(() => import(/* webpackChunkName: "Page1" */
 export const Page2 = asyncComponent(() => import(/* webpackChunkName: "Page2" */'src/views/page2/js/Page2'));
 ```
 
-A bit tedious to repeat the name of the chunk in the [Webpack magic comment](https://webpack.js.org/guides/code-splitting/#dynamic-imports), but it is on the same line so it should not be hard to maintain.
+We are using [Webpack magic comments](https://webpack.js.org/guides/code-splitting/#dynamic-imports) to name the chunks. It is a bit tedious to repeat the name of the chunk, but it is on the same line so it should not be hard to maintain.
 
 [Bundles.js](./client/src/entry/js/components/Bundles.js)
 ```js
@@ -163,9 +163,9 @@ export const Page2 = syncComponent('Page2', require('src/views/page2/js/Page2'))
 
 And the same list, using the other HOC.
 
-#### What do we do with our routes?
+#### What do we do with the lists?
 
-Good question. Now that our routes are gathered in one file, it is time to define the structure of our app. Thanks to [react-router-config](https://github.com/ReactTraining/react-router/tree/master/packages/react-router-config), we can do it in one place (this will be helpful for the server to know which routes can be rendered).
+It is now time to define the structure of our app. Thanks to [react-router-config](https://github.com/ReactTraining/react-router/tree/master/packages/react-router-config), we can do it all at one place (this will be helpful for the server to know which routes can be rendered).
 
 [routes.js](./client/src/entry/js/components/routes.js)
 ```js
@@ -199,9 +199,9 @@ const routesArray = [{
 }];
 ```
 
-With this awesome package, and the `getChildRoutes` function, you can define your routes in a declarative way, and of course you can nest them as you please.
+With this awesome package, and the `getChildRoutes` function, we will be able to define our routes in a declarative way, and of course we can nest them as we please.
 
-There is one catch though: when you nest routes, the parent route must have this code inside it to render its children routes:
+There is one little catch though: when we nest routes, the parent route must contain following code so it can render its children routes:
 
 [MainLayout.js](./client/src/views/main-layout/js/MainLayout.js)
 ```js
@@ -226,7 +226,9 @@ const plugins = [
 ];
 ```
 
-#### Bundle the whole thing
+I used two because I import `AsyncBundles` twice from two different paths.
+
+#### Putting the pieces together
 
 For all of this to work together, we will create two entry points.
 
@@ -289,12 +291,12 @@ const render = manifests => (req, res) => {
 };
 ```
 
-The server entry will generate the markup on the server and send it to the client. Note that if a redirection happens during the rendering of the App, it will immediately redirect the client, making it seamless for them.  
-A few things to note:
-- we are using [react-helmet](https://github.com/nfl/react-helmet) to generate dynamic a dynamic head tag
+The server entry will generate the markup on the server and send it to the client. A few things to note:
+- if a redirection happens during the rendering of the App, it will immediately redirect the client, and they will only receive one markup
+- we are using [react-helmet](https://github.com/nfl/react-helmet) to generate dynamic head tag
 - we are injecting the `splitPoints` and `serverSideHeaders` in the window, so the client can use them
 - we are importing the CSS file and JS chunks differently whether we are in development mode or production, but we will cover that later
-- we are using [pace.js](http://github.hubspot.com/pace/docs/welcome/) to show the user the site isn't responsive yet, but this is a matter of preference.
+- we are using [pace.js](http://github.hubspot.com/pace/docs/welcome/) to show the user the site isn't responsive yet, but this is a matter of preference and totally optional
 
 [client.js](./client/src/entry/js/client.js)
 ```js
@@ -318,7 +320,7 @@ Promise.all(splitPoints.map(chunk => Bundles[chunk].loadComponent()))
   .then(doRender);
 ```
 
-The client entry will receive the split points and wait for them to be loaded to render. It will also receive the server side headers because it is often useful to have access to headers we otherwise couldn't access from the client (e.g. Accept-Language or custom headers).
+The client entry will receive the splitPoints (which are the chunks needed for the request), load them, and wait for them to be ready to render. It will also receive the server side headers because it is often useful to have access to headers we otherwise couldn't access from the client (e.g. Accept-Language or custom headers).
 
 [App.js](./client/src/entry/js/App.js)
 ```js
@@ -338,7 +340,7 @@ const App = ({ type, url, context }) => {
 };
 ```
 
-This component will just render the right router (browser or static) based on the type of the App, and the Head, containing meta tags.
+This component will render the Head (containing meta tags), and the right router (browser or static) based on the type of the App.
 
 [Head.js](./client/src/entry/js/components/Head.js)
 ```js
@@ -358,6 +360,8 @@ const Head = () => (
   </Helmet>
 );
 ```
+
+Here we have meta tags which can be overridden anywhere in the app. 
 
 [ServerRouting.js](./client/src/entry/js/components/ServerRouting.js)
 ```js
@@ -385,14 +389,14 @@ const ClientRouting = () => (
 );
 ```
 
-Finally, the last pieces of the puzzle! Nothing fancy here, we are following the [React-router docs](https://reacttraining.com/react-router/) and using the appropriate router on each side.
+Finally, the last pieces of the puzzle! Nothing fancy here, we are following the [React-router docs](https://reacttraining.com/react-router/) and using the appropriate router for each side.
 
 ### CSS Modules working without FOUT
 
-We got JS covered, but what about CSS? _People using CSS in JS are laughing in the back of the room._ Well, we're using CSS Modules and we're not giving up this easy!
+We got JS covered, but what about CSS? If you ever tried using [style-loader](https://github.com/webpack-contrib/style-loader) in SSR, you will know it doesn't work on the server. _People using CSS in JS are laughing in the back of the room._ Well, we're using CSS Modules and we're not giving up this easy!
  
 The solution here is rather simple. We will use [extract-text-webpack-plugin](https://github.com/webpack-contrib/extract-text-webpack-plugin) on the server to bundle our CSS in a separate file, which will be requested by the HTML we send to our users.  
-While we're at it, we should use [autoprefixer](https://github.com/postcss/autoprefixer) with a [.browserslistrc](https://github.com/ai/browserslist) to specify which browsers we want to support!
+While we're at it, we should use [autoprefixer](https://github.com/postcss/autoprefixer) with a [.browserslistrc](https://github.com/ai/browserslist) to make sure our CSS works on every browser we wish to support!
 
 [webpack.config.server.js](./webpack.config.server.js)
 ```js
@@ -464,8 +468,6 @@ const plugins = [
 ];
 ```
 
-And, In the client config:
-
 [webpack.config.client.js](./webpack.config.client.js)
 ```js
 const ExtractTextPlugin = require('extract-text-webpack-plugin');
@@ -536,11 +538,13 @@ And if you remember, in the markup we will send to the client:
 <link rel="stylesheet" href="${!manifests.server ? '/dist/server/main.css' : manifests.server['main.css']}" />
 ```
 
-CSS is covered too, and easily! We haven't noticed any Flash of Unstyled Content with this approach, even with throttled connection, so I think you are good to continue reading!
+CSS is covered too, and easily! We haven't noticed any Flash of Unstyled Content with this approach (testing with throttled connection), so I think you are good to continue reading!
 
-### Smaller images bundled with JS, larger images served by S3 (or some other CDN)
+_Note:_ my initial idea was to use something like [purifycss](https://github.com/purifycss/purifycss) to strip any CSS not used by the HTML we would send to the user, and inline the result in the head. Unfortunately, after several tests I couldn't manage to make it work under 4 seconds for fairly small pages.
 
-First, we will define a breakpoint between small and large images. Let's say 20kb. Thanks to [url-loader](https://github.com/webpack-contrib/url-loader), images which weigh less than 20kb after compression will be inlined, while larger images will be loaded by the browser.
+### Smaller images inlined with JS, larger images served by S3 (or some other CDN)
+
+The goal here is to inline small images so they can load instantly, without adding to much weight to our JS bundles. First, we will define a breakpoint between small and large images. Let's say 20kb.
 
 #### Generating images
 
@@ -574,12 +578,14 @@ const rules = [
   },
 ];
 ```
+_For this rule, use the same config on the server than on the client, except for `emitFile: false` on the server_
+
+
+Thanks to [url-loader](https://github.com/webpack-contrib/url-loader), images which weigh less than 20kb after compression will be inlined, while larger images will be loaded by the browser.
 
 _Did you say compression?_
 
-Yes! While we're at it, why not using [image-webpack-loader](https://github.com/tcoopman/image-webpack-loader) which provides a way to compress images at build time, so we can ensure our users only download the most optimized content?
-
-_Tip: for this rule, use the same config on the server than on the client, except for `emitFile: false` on the server_
+Yes! While we're at it, we will use [image-webpack-loader](https://github.com/tcoopman/image-webpack-loader) which provides a way to compress images at build time, so we can ensure our users only download the most optimized content.
 
 And voila! Images are generated by the client build, and ignored by the server build (because the output would be the same).
 
@@ -594,19 +600,19 @@ For the storing part, just put your images on a S3 bucket or some other CDN.
 const PUBLIC_PATH = !IS_PRODUCTION || IS_LOCAL ? '/dist/' : process.env.ASSETS_URL;
 ```
 
-As for accessing them, provide ASSETS_URL to the `build` script in [package.json](./package.json), and it will replace `dist` with the proper URL!
+As for accessing them, provide ASSETS_URL to the `build` script in [package.json](./package.json), and it will replace `dist` with the proper URL! Your images will be loaded from `dist` in development, and from your CDN in production.
 
-_Tip: you can always use `build:local` to debug your app in a production environment, while still being able to access your assets from your local storage_
+_Tip: you can always use `build:local` to debug your app in a production environment, being able to access your assets from `dist_
 
 ### Long-term caching of assets, including chunks (production only)
 
-One step away to production! But what about cache? What is the point of providing a blazing-fast website when the user has to download every asset every time he visits it?
+One step away from production! But what about cache? What is the point of providing a blazing-fast website when the user has to download every asset every time he visits it?
 
 If you're not familiar with the notion of long-term caching, I suggest you read the [docs from Webpack](https://webpack.js.org/guides/caching/). Basically, it allows for your assets to be cached indefinitely, unless their content changes. Note that this only affects production build, as you don't want any cache in development.
 
 #### Bundling node modules in a vendors chunk
 
-Node modules are heavy, and change less often than your code. It would be a shame if the client should download node modules all over again each time a new feature is deployed! It _would_, but won't, because we will bundle our node modules code in a separate chunk, which will only be invalidated when dependencies get updated.
+Node modules are heavy, and change less often than your code. It would be a shame if the client would have to download node modules all over again each time a new feature is deployed! It _would_, but isn't, because we will bundle our node modules in a separate chunk, which will only be invalidated when dependencies get updated.
 
 Also, code which is common to multiple chunks could be exported to a separate chunk so it only gets downloaded once (and when it changes, of course).
 
@@ -637,6 +643,15 @@ const plugins = [
 ```
 
 Now, modules imported in 3 chunks or more will go in the `common` chunk, and node modules will go in the `vendors` chunk.
+
+[webpack.config.server.js](./webpack.config.server.js)
+```js
+const nodeExternals = require('webpack-node-externals');
+
+externals: [nodeExternals()],
+```
+
+And on the server, we don't even bundle node modules, as they are accessible from the `node_modules` folder.
 
 #### Generating hashes in our assets names
 
@@ -688,7 +703,7 @@ const prodPlugins = [
 
 #### Mapping hashed names to predictable names
 
-In order to include our assets in the document, we will need to be able to predict their dynamic name. For this one, we will be using [webpack-manifest-plugin]().
+How will we include our assets in the document if their name is dynamic? Well, we will have to generate files which will map predictable chunk names to dynamic ones. In order to do this, we will use [webpack-manifest-plugin](https://github.com/danethurber/webpack-manifest-plugin).
 
 [webpack.config.client.js](./webpack.config.client.js)
 ```js
@@ -714,11 +729,11 @@ const prodPlugins = [
 ];
 ```
 
-This code will output two files, called **manifests**, which will map predictable chunk names to the real, dynamic ones.
+This code will output two files, which we will call **manifests**.
 
 #### Including assets in the document
 
-The last step is to include our assets in the document. It requires accessing our manifests, in order to include the right assets names.
+The last step is to include our assets in the document.
 
 [app.js](./app.js)
 ```js
@@ -729,7 +744,7 @@ manifests.client = require('./public/dist/client-manifest');
 app.use(serverRender(manifests));
 ```
 
-_Note: in development, `serverRender` will also get called (by Webpack) with an object as a parameter_
+_Note: in development, `serverRender` will also get called (by Webpack-dev-server) with an object as a parameter_
 
 [server.js](./client/src/entry/js/server.js)
 ```js
@@ -784,11 +799,11 @@ app.use(webpackHotServerMiddleware(multiCompiler, {
 }));
 ```
 
-We will get rid of sourcemaps for faster builds, and also of content hashes.
+We will get rid of sourcemaps and hashes, for faster builds, because we have to build twice (one for the server, once for the client).
 
 ### A painless experience for the developer
 
-Last but not least: the developer experience. Let's quickly recap the steps to integrate SSR into an existing codebase, assuming you're already bundling your code with Webpack :
+Last but not least: the developer experience. Let's quickly recap the steps to integrate SSR into an existing codebase, assuming you're already bundling your code with Webpack and using React-router :
 
 - create two Webpack configs (`client` and `server`)
 - create two server files (`app` and `app.dev`)
@@ -804,8 +819,8 @@ And once it is set up, the steps to create a new route:
 - add the route in the `Bundles` and `AsyncBundles` files
 - also add it in the `routes` file
 
-Aaaaaand that's it! You're all set up and ready to go to production.
+Aaaaaand that's it! You are all set up and ready to go to production. We have found this setup to be quite effective, and have been using it on [Amazon Elastic Beanstalk](https://aws.amazon.com/fr/elasticbeanstalk/) with a proper load-balancing configuration for a few months now. 
 
 _Note on performance:_ in React 15, the `render` function is synchronous on the server, meaning that it could be a performance bottleneck if you have a lot of simultaneous requests. Fortunately, an async `render` [is coming with React 16](https://github.com/facebook/react/issues/10294)! You can already try it by installing `react@next`.
 
-That's pretty much all I have to share on the subject! Feel free to share your thoughts, correct my mistakes and to submit improvements to the [ssr-starter-pack](https://github.com/Zephir77167/ssr-starter-pack)! PRs are more than welcome. Alternately, feel free to come discuss on the **#ssr** channel of [Reactiflux](https://www.reactiflux.com/)!
+That's pretty much all I have to share on the subject! Feel free to share your thoughts, to point out any mistakes I would have made and to submit improvements to the [ssr-starter-pack](https://github.com/Zephir77167/ssr-starter-pack)! PRs are more than welcome. Also, feel free to come discuss on the **#ssr** channel of [Reactiflux](https://www.reactiflux.com/)!
