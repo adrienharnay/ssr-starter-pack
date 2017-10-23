@@ -20,6 +20,7 @@ app.use(webpackDevMiddleware(multiCompiler, {
   publicPath: clientConfig.output.publicPath,
   noInfo: true,
   stats: { children: false },
+  serverSideRender: true,
 }));
 app.use(webpackHotMiddleware(clientCompiler));
 app.use(webpackHotServerMiddleware(multiCompiler, {
