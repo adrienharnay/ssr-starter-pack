@@ -23,7 +23,7 @@ app.use(webpackDevMiddleware(multiCompiler, {
 }));
 app.use(webpackHotMiddleware(clientCompiler));
 app.use(webpackHotServerMiddleware(multiCompiler, {
-  serverRenderOptions: { outputPath: clientConfig.output.path },
+  serverRendererOptions: { outputPath: clientConfig.output.path },
 }));
 
 app.listen(PORT_NUMBER, () => {
