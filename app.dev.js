@@ -1,6 +1,7 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const webpack = require('webpack');
+const DashboardPlugin = require('webpack-dashboard/plugin');
 const webpackDevMiddleware = require('webpack-dev-middleware');
 const webpackHotMiddleware = require('webpack-hot-middleware');
 const webpackHotServerMiddleware = require('webpack-hot-server-middleware');
@@ -15,6 +16,8 @@ app.use(express.static('public/assets'));
 
 const multiCompiler = webpack([clientConfig, serverConfig]);
 const clientCompiler = multiCompiler.compilers[0];
+
+clientCompiler.apply(new DashboardPlugin());
 
 app.use(webpackDevMiddleware(multiCompiler, {
   publicPath: clientConfig.output.publicPath,
